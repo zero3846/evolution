@@ -2,42 +2,44 @@
 
 let contentDiv = document.getElementById('content');
 
-function testOutcome(probability) {
-	return Math.random() <= probability;
-}
+const Stats = {
+	avg: function (values, get, len) {
+		if (typeof get === 'undefined') { get = (xs, i) => xs[i]; };
+		if (typeof len === 'undefined') { len = (xs) => xs.length; };
 
-function avg(values, get, len) {
-	if (typeof get === 'undefined') { get = (xs, i) => xs[i]; };
-	if (typeof len === 'undefined') { len = (xs) => xs.length; };
+		let n = len(values);
+		let sum = 0.0;
+		for (let i = 0; i < n; ++i) {
+			sum += get(values, i);
+		}
+		return sum / n;
+	},
 
-	let n = len(values);
-	let sum = 0.0;
-	for (let i = 0; i < n; ++i) {
-		sum += get(values, i);
-	}
-	return sum / n;
-}
+	stddev2: function (values, get, len) {
+		if (typeof get === 'undefined') { get = (xs, i) => xs[i]; };
+		if (typeof len === 'undefined') { len = (xs) => xs.length; };
 
-function stddev2(values, get, len) {
-	if (typeof get === 'undefined') { get = (xs, i) => xs[i]; };
-	if (typeof len === 'undefined') { len = (xs) => xs.length; };
+		let midpoint = Stats.avg(values, get, len);
+		let n = len(values);
+		let sum = 0.0;
+		for (let i = 0; i < n; ++i) {
+			let delta = get(values, i) - midpoint;
+			sum += delta * delta;
+		}
+		return sum / n;
+	},
 
-	let midpoint = avg(values, get, len);
-	let n = len(values);
-	let sum = 0.0;
-	for (let i = 0; i < n; ++i) {
-		let delta = get(values, i) - midpoint;
-		sum += delta * delta;
-	}
-	return sum / n;
-}
+	stddev: function (values, get, len) {
+		if (typeof get === 'undefined') { get = (xs, i) => xs[i]; };
+		if (typeof len === 'undefined') { len = (xs) => xs.length; };
 
-function stddev(values, get, len) {
-	if (typeof get === 'undefined') { get = (xs, i) => xs[i]; };
-	if (typeof len === 'undefined') { len = (xs) => xs.length; };
+		return Math.sqrt(Stats.stddev2(values, get, len));
+	},
 
-	return Math.sqrt(stddev2(values, get, len));
-}
+	testOutcome: function (probability) {
+		return Math.random() <= probability;
+	},
+};
 
 function createWorld() {
 	let world = {};
@@ -51,7 +53,7 @@ function updateWorld(world) {
 	let delta = 0;
 
 	for (let i = 0; i < world.population; ++i) {
-		if (testOutcome(world.deathRate)) {
+		if (Stats.testOutcome(world.deathRate)) {
 			--world.population;
 		}
 	}
@@ -62,7 +64,7 @@ function updateWorld(world) {
 
 	delta = 0;
 	for (let i = 0; i < world.population; ++i) {
-		if (testOutcome(world.birthRate)) {
+		if (Stats.testOutcome(world.birthRate)) {
 			++delta;
 		}
 	}
@@ -85,16 +87,16 @@ function runSimulation(numSteps, numSimulations) {
 
 		let simulation = {};
 		simulation.population = population;
-		simulation.popAvg = avg(population);
-		simulation.popStdDev = stddev(population);
+		simulation.popAvg = Stats.avg(population);
+		simulation.popStdDev = Stats.stddev(population);
 		simulations.push(simulation);
 	}
 
 	let statsPerStep = [];
 	for (let step = 0; step < numSteps; ++step) {
 		let stats = {};
-		stats.avg = avg(simulations, (sims, j) => sims[j].population[step], (sims) => sims.length); 
-		stats.stddev = stddev(simulations, (sims, j) => sims[j].population[step], (sims) => sims.length);
+		stats.avg = Stats.avg(simulations, (sims, j) => sims[j].population[step], (sims) => sims.length);
+		stats.stddev = Stats.stddev(simulations, (sims, j) => sims[j].population[step], (sims) => sims.length);
 		statsPerStep.push(stats);
 	}
 
