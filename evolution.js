@@ -1,7 +1,5 @@
 // File: evolution.js
 
-let contentDiv = document.getElementById('content');
-
 const Stats = {
 	avg: function (values, get, len) {
 		if (typeof get === 'undefined') { get = (xs, i) => xs[i]; };
@@ -105,4 +103,103 @@ function runSimulation(numSteps, numSimulations) {
 	}
 }
 
-runSimulation(1000, 100);
+let chart = {
+	margin: {
+		left: 10,
+		top: 10,
+		right: 10,
+		bottom: 10,
+	},
+
+	xAxis: { min: 0, max: 10 },
+	yAxis: { min: 0, max: 10 },
+
+	chartArea: { x: 0, y: 0, width: 0, height: 0 },
+
+	toCanvasX: function (x) {
+		return (x - this.xAxis.min) * this.chartArea.width / (this.xAxis.max - this.xAxis.min) + this.chartArea.x;
+	},
+
+	toCanvasY: function (y) {
+		return (this.yAxis.min - y) * this.chartArea.height / (this.yAxis.max - this.yAxis.min) + this.chartArea.y + this.chartArea.height;
+	},
+
+	getNiceSpacings: function (min, max, expectedCount) {
+		console.assert(min < max, "Min must be less than max.");
+		console.assert(expectedCount > 0, "Expected count must be greater than zero.");
+
+		// Compute an exact unit size based on the expected count.
+		let unit0 = (max - min) / expectedCount;
+
+		// Round the unit based on the most significant digit and precision.
+		let precision = Math.round(Math.log10(unit0));
+		let msd = Math.ceil(unit0 * Math.pow(10, -precision))
+		let unit = msd * Math.pow(10, precision);
+
+		// Compute the start and end indices.
+		let start = Math.floor(min / unit) + 1;
+		let end = Math.ceil(max / unit) - 1;
+
+		// Generate all the nice spacings.
+		let spacings = [];
+		for (let i = start; i <= end; ++i) {
+			spacings.push(i * unit);
+		}
+		return spacings;
+	},
+
+	drawLineChart: function (canvas) {
+		const ctx = canvas.getContext('2d');
+
+		this.chartArea.x = this.margin.left;
+		this.chartArea.y = this.margin.right;
+		this.chartArea.width = canvas.width - this.margin.left - this.margin.right;
+		this.chartArea.height = canvas.height - this.margin.top - this.margin.bottom;
+
+		let chartXMin = this.chartArea.x;
+		let chartXMax = this.chartArea.x + this.chartArea.width;
+		let chartYMin = this.chartArea.y;
+		let chartYMax = this.chartArea.y + this.chartArea.height;
+
+		// Draw the x-axis markers
+		let numXUnits = 10;
+		let xSpacings = this.getNiceSpacings(this.xAxis.min, this.xAxis.max, numXUnits);
+		for (let i = 0; i < xSpacings.length; ++i) {
+			let x = xSpacings[i];
+			let chartX = this.toCanvasX(x);
+
+			ctx.beginPath();
+			ctx.moveTo(chartX, chartYMin);
+			ctx.lineTo(chartX, chartYMax);
+			ctx.stroke();
+		}
+
+		// Draw the y-axis markers
+		let numYUnits = 10;
+		let ySpacings = this.getNiceSpacings(this.yAxis.min, this.yAxis.max, numYUnits);
+		for (let i = 0; i < ySpacings.length; ++i) {
+			let y = ySpacings[i];
+			let chartY = this.toCanvasY(y);
+
+			ctx.beginPath();
+			ctx.moveTo(chartXMin, chartY);
+			ctx.lineTo(chartXMax, chartY);
+			ctx.stroke();
+		}
+
+		// Draw the chart area border
+		ctx.strokeRect(
+			this.chartArea.x,
+			this.chartArea.y,
+			this.chartArea.width,
+			this.chartArea.height
+		);
+	},
+};
+
+function onBodyLoad() {
+	const canvas = document.getElementById('chart');
+
+	//runSimulation(1000, 100);
+	chart.drawLineChart(canvas);
+};
